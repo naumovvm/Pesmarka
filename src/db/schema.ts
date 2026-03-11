@@ -45,4 +45,6 @@ export const songSubmission = pgTable('song_submission', {
     adminComment: text('admin_comment'),
     createdAt: timestamp('created_at').defaultNow(),
     youtubeId: varchar('youtube_id', {length: 50}),
+    difficulty: varchar('difficulty', {length: 20}).notNull(),
+    capoPosition: integer('capo_position').default(0),
 });

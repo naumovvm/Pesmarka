@@ -3,6 +3,7 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+// import ChordProPreview from "../components/ChordProPreview.tsx";
 
 export default function HomePage({ category }: { category: 'balkan' | 'foreign' }) {
     const songs = [
@@ -41,6 +42,16 @@ export default function HomePage({ category }: { category: 'balkan' | 'foreign' 
                     FAVORITES
                 </Button>
             </Box>
+
+            {/*Testing chordpro preview:*/}
+            {/*<Box sx={{width: '100%', maxWidth: '900px', mb: 5}}>*/}
+            {/*    <ChordProPreview chordPro={`*/}
+            {/*        {title: Girl on the Moon}*/}
+            {/*        {artist: Foreigner}*/}
+            {/*        {start_of_verse}*/}
+            {/*        [Am]Cuz she's a girl on the [Em]moon*/}
+            {/*    `}/>*/}
+            {/*</Box>*/}
 
             <Box sx={{ width: '100%', maxWidth: '900px' }}>
                 <Typography variant="h6" align="center" sx={{ mb: 2, fontWeight: 'bold' }}>
