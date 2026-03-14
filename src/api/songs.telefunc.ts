@@ -7,14 +7,14 @@ import { songSubmission } from '../db/schema';
 export async function submitSong(data: {
     artistId?: number;
     artistName?: string;
-    titleCyrillic: string;
-    titleLatin: string;
+    title: string;
     lyricsWithChords: string;
     difficulty: string;
     capoPosition: number;
     youtubeId?: string;
-}) {
-    const { user } = getContext();
+})
+ {
+    const { user } = getContext() as { user: { id: number; username: string; isAdmin: boolean } | null };
 
     if (!user) throw new Error('You must be logged in to submit a song.');
 
@@ -22,8 +22,7 @@ export async function submitSong(data: {
         userId: user.id,
         artistId: data.artistId ?? null,
         artistName: data.artistName ?? null,
-        titleCyrillic: data.titleCyrillic,
-        titleLatin: data.titleLatin,
+        title: data.title,
         lyricsWithChords: data.lyricsWithChords,
         difficulty: data.difficulty,
         capoPosition: data.capoPosition,
@@ -55,3 +54,4 @@ export async function getSongsByArtist(artistId: number){
 export async function getSongById(songId: number){
     return db.select().from(song).where(eq(song.id, songId)).limit(1);
 }
+

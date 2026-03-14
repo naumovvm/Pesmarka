@@ -16,8 +16,11 @@ interface Props {
     artists: Artist[];
 }
 
-export default function SubmitForm({artists}: Props) {
+const isCyrillic = (text: string) => /[\u0400-\u04FF]/.test(text);
+
+export default function SubmitForm({ artists }: Props) {
     const [artistMode, setArtistMode] = useState<'existing' | 'new'>('existing');
+    const [category, setCategory] = useState<'balkan' | 'foreign'>('balkan');
     const [lyrics, setLyrics] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -28,15 +31,29 @@ export default function SubmitForm({artists}: Props) {
         const form = e.currentTarget;
         const data = new FormData(form);
 
+        const title = String(data.get('title'));
+        const artistName = String(data.get('artistName') ?? '');
+
+        // Cyrillic validation for balkan songs
+        if (category === 'balkan') {
+            if (!isCyrillic(title)) {
+                setError('Balkan songs must have a Cyrillic title.');
+                return;
+            }
+            if (artistMode === 'new' && !isCyrillic(artistName)) {
+                setError('Balkan artist names must be in Cyrillic.');
+                return;
+            }
+        }
+
         setLoading(true);
         setError('');
 
         try {
             await submitSong({
                 artistId: artistMode === 'existing' ? Number(data.get('artistId')) : undefined,
-                artistName: artistMode === 'new' ? String(data.get('artistName')) : undefined,
-                titleCyrillic: String(data.get('titleCyrillic')),
-                titleLatin: String(data.get('titleLatin')),
+                artistName: artistMode === 'new' ? artistName : undefined,
+                title,
                 lyricsWithChords: lyrics,
                 difficulty: String(data.get('difficulty')),
                 capoPosition: Number(data.get('capo')) || 0,
@@ -52,15 +69,31 @@ export default function SubmitForm({artists}: Props) {
         }
     };
 
+    const filteredArtists = artists.filter(a => a.category === category);
+
     return (
-        <Box
-            sx={{
-                display: 'grid',
-                gridTemplateColumns: {xs: '1fr', md: '1fr 1fr'},
-                gap: 4,
-            }}
-        >
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 4 }}>
+
+            {/* LEFT — Form */}
             <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" gap={3}>
+
+                {/* Category toggle */}
+                <Box>
+                    <Typography variant="subtitle2" mb={1}>Category</Typography>
+                    <ToggleButtonGroup
+                        value={category}
+                        exclusive
+                        onChange={(_, v) => v && setCategory(v)}
+                        size="small"
+                    >
+                        <ToggleButton value="balkan">Balkan</ToggleButton>
+                        <ToggleButton value="foreign">Foreign</ToggleButton>
+                    </ToggleButtonGroup>
+                </Box>
+
+                <Divider />
+
+                {/* Artist toggle */}
                 <Box>
                     <Typography variant="subtitle2" mb={1}>Artist</Typography>
                     <ToggleButtonGroup
@@ -68,7 +101,7 @@ export default function SubmitForm({artists}: Props) {
                         exclusive
                         onChange={(_, v) => v && setArtistMode(v)}
                         size="small"
-                        sx={{mb: 2}}
+                        sx={{ mb: 2 }}
                     >
                         <ToggleButton value="existing">Existing artist</ToggleButton>
                         <ToggleButton value="new">New artist</ToggleButton>
@@ -76,23 +109,33 @@ export default function SubmitForm({artists}: Props) {
 
                     {artistMode === 'existing' ? (
                         <TextField select fullWidth label="Select artist" name="artistId">
-                            {artists.map((a) => (
-                                <MenuItem key={a.id} value={a.id}>
-                                    {a.nameCyrillic} / {a.nameLatin}
-                                </MenuItem>
+                            {filteredArtists.map((a) => (
+                                <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
                             ))}
                         </TextField>
                     ) : (
-                        <TextField fullWidth label="Artist name" name="artistName"/>
+                        <TextField
+                            fullWidth
+                            label={category === 'balkan' ? 'Artist name (Cyrillic)' : 'Artist name'}
+                            name="artistName"
+                            helperText={category === 'balkan' ? 'Must be in Cyrillic e.g. Дино Мерлин' : ''}
+                        />
                     )}
                 </Box>
 
-                <Divider/>
+                <Divider />
 
-                <TextField fullWidth label="Title (Cyrillic)" name="titleCyrillic" required/>
-                <TextField fullWidth label="Title (Latin)" name="titleLatin" required/>
+                {/* Single title */}
+                <TextField
+                    fullWidth
+                    label={category === 'balkan' ? 'Title (Cyrillic)' : 'Title'}
+                    name="title"
+                    required
+                    helperText={category === 'balkan' ? 'Must be in Cyrillic e.g. Љубав је' : ''}
+                />
 
-                <Box sx={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2}}>
+                {/* Difficulty + Capo */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                     <TextField select fullWidth label="Difficulty" name="difficulty">
                         {['Beginner', 'Intermediate', 'Advanced'].map((d) => (
                             <MenuItem key={d} value={d.toLowerCase()}>{d}</MenuItem>
@@ -139,15 +182,13 @@ export default function SubmitForm({artists}: Props) {
                 </Button>
             </Box>
 
-            <Paper
-                variant="outlined"
-                sx={{p: 3, position: 'sticky', top: 80, alignSelf: 'start', minHeight: 400}}
-            >
+            {/* RIGHT — Live Preview */}
+            <Paper variant="outlined" sx={{ p: 3, position: 'sticky', top: 80, alignSelf: 'start', minHeight: 400 }}>
                 <Typography variant="subtitle2" mb={2} color="text.secondary">
                     Live Preview
                 </Typography>
                 {lyrics
-                    ? <ChordProPreview chordPro={lyrics}/>
+                    ? <ChordProPreview chordPro={lyrics} />
                     : <Typography color="text.disabled">Start typing lyrics to see the preview…</Typography>
                 }
             </Paper>
