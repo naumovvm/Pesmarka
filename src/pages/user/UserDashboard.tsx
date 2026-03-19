@@ -105,7 +105,7 @@ export default function UserDashboard() {
                         data.submissions.map((song) => (
                             <Paper key={song.id} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                                 <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                                    {song.titleCyrillic}
+                                    {song.title}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
                                     {song.artistName}

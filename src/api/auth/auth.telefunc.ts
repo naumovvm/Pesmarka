@@ -26,9 +26,8 @@ export async function register(username: string, email: string, password: string
         isAdmin: user.isAdmin
     });
 
-
     const token = jwt.sign(
-        {id: newUser.id, username: newUser.username},
+        {id: newUser.id, username: newUser.username, isAdmin: newUser.isAdmin}, // ← fixed
         JWT_SECRET,
         {expiresIn: "7d"}
     );

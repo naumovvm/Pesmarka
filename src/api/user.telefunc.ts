@@ -18,8 +18,7 @@ export async function getUserDashboard(userId: number) {
     const submissions = await db
         .select({
             id: songSubmission.id,
-            titleCyrillic: songSubmission.titleCyrillic,
-            titleLatin: songSubmission.titleLatin,
+            title: songSubmission.title,
             artistName: songSubmission.artistName,
             youtubeId: songSubmission.youtubeId,
             status: songSubmission.status,
@@ -39,8 +38,7 @@ export async function getPendingSubmissions() {
     return db
         .select({
             id: songSubmission.id,
-            titleCyrillic: songSubmission.titleCyrillic,
-            titleLatin: songSubmission.titleLatin,
+            title: songSubmission.title,
             artistName: songSubmission.artistName,
             youtubeId: songSubmission.youtubeId,
             status: songSubmission.status,

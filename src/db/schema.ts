@@ -52,5 +52,5 @@ export const songSubmission = pgTable('song_submission', {
     capoPosition: integer('capo_position').default(0),
 });
 
-// to do: remove both title types and maybe stick to just one title? no clue why i needed both in the first place
+// to do: remove both title types and maybe stick to just one title? no clue why I needed both in the first place
 // consult with claude

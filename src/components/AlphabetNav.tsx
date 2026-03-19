@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useRef} from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -7,11 +7,22 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Popper from '@mui/material/Popper';
+import Paper from '@mui/material/Paper';
+import MenuItem from '@mui/material/MenuItem';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import {useTheme} from '@mui/material/styles';
 import {useAuth} from '../context/AuthContext';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate, useLocation} from 'react-router-dom';
+import {getArtistsByLetter} from '../api//songs.telefunc';
+
+interface Artist {
+    id: number;
+    name: string;
+    letter: string;
+    category: string;
+}
 
 interface NavbarProps {
     currentCategory: 'balkan' | 'foreign';
@@ -30,23 +41,54 @@ export default function AlphabetNav({
                                     }: NavbarProps) {
     const cyrillicAlphabet = ['А', 'Б', 'В', 'Г', 'Д', 'Ѓ', 'Е', 'Ж', 'З', 'Ѕ', 'И', 'Ј', 'К', 'Л', 'Љ', 'М', 'Н', 'Њ', 'О', 'П', 'Р', 'С', 'Т', 'Ќ', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Џ', 'Ш'];
     const latinAlphabet = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-
     const alphabet = currentCategory === 'balkan' ? cyrillicAlphabet : latinAlphabet;
-    const navigate = useNavigate();
 
-    const handleToggle = (
-        _event: React.MouseEvent<HTMLElement>,
-        newCategory: 'balkan' | 'foreign' | null,
-    ) => {
-        if (newCategory !== null) {
-            onCategoryChange(newCategory);
-        }
-    };
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+    const [hoveredLetter, setHoveredLetter] = useState<string | null>(null);
+    const [artists, setArtists] = useState<Artist[]>([]);
+    const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const {navbarBg, textColor, borderColor, buttonGray, toggleBg, toggleColor, toggleSelectedBg} = theme.custom;
     const auth = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleLetterEnter = async (event: React.MouseEvent<HTMLElement>, letter: string) => {
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+        setAnchorEl(event.currentTarget);
+        setHoveredLetter(letter);
+        const result = await getArtistsByLetter(letter, currentCategory);
+        setArtists(result);
+    };
+
+    const handleLetterLeave = () => {
+        closeTimer.current = setTimeout(() => {
+            setAnchorEl(null);
+            setHoveredLetter(null);
+            setArtists([]);
+        }, 150);
+    };
+
+    const handleDropdownEnter = () => {
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+    };
+
+    const handleDropdownLeave = () => {
+        closeTimer.current = setTimeout(() => {
+            setAnchorEl(null);
+            setHoveredLetter(null);
+            setArtists([]);
+        }, 150);
+    };
+
+    const handleToggle = (
+        _event: React.MouseEvent<HTMLElement>,
+        newCategory: 'balkan' | 'foreign' | null,
+    ) => {
+        if (newCategory !== null) onCategoryChange(newCategory);
+    };
 
     return (
         <>
@@ -100,14 +142,14 @@ export default function AlphabetNav({
                                     >
                                         {auth.user?.username}
                                     </Typography>
-                                    <Button variant="outlined" sx={{color: textColor, borderColor: borderColor}}
+                                    <Button variant="outlined" sx={{color: textColor, borderColor}}
                                             onClick={auth.logout}>
                                         Logout
                                     </Button>
                                 </>
                             ) : (
                                 <>
-                                    <Button variant="outlined" sx={{color: textColor, borderColor: borderColor}}
+                                    <Button variant="outlined" sx={{color: textColor, borderColor}}
                                             onClick={onLoginClick}>
                                         Login
                                     </Button>
@@ -118,7 +160,6 @@ export default function AlphabetNav({
                                 </>
                             )}
                         </Box>
-
                     </Toolbar>
                 </Box>
             </AppBar>
@@ -126,8 +167,7 @@ export default function AlphabetNav({
             <Box sx={{
                 bgcolor: navbarBg,
                 borderTop: `1px solid ${borderColor}`,
-                py: 1,
-                px: 2,
+                py: 1, px: 2,
                 transition: '0.3s',
                 display: 'flex',
                 justifyContent: 'center',
@@ -138,18 +178,49 @@ export default function AlphabetNav({
                     <Button
                         key={letter}
                         size="small"
+                        onMouseEnter={(e) => handleLetterEnter(e, letter)}
+                        onMouseLeave={handleLetterLeave}
                         sx={{
                             minWidth: '30px',
-                            color: textColor,
-                            '&:hover': {
-                                backgroundColor: 'rgba(255,255,255, 0.1)'
-                            }
+                            color: hoveredLetter === letter ? '#fff' : textColor,
+                            backgroundColor: hoveredLetter === letter ? 'rgba(255,255,255,0.15)' : 'transparent',
+                            '&:hover': {backgroundColor: 'rgba(255,255,255,0.1)'}
                         }}
                     >
                         {letter}
                     </Button>
                 ))}
             </Box>
+
+            <Popper open={Boolean(anchorEl) && artists.length > 0} anchorEl={anchorEl} placement="bottom-start"
+                    sx={{zIndex: 1300}}>
+                <Paper
+                    onMouseEnter={handleDropdownEnter}
+                    onMouseLeave={handleDropdownLeave}
+                    sx={{
+                        mt: 0.5,
+                        minWidth: 160,
+                        maxHeight: 300,
+                        overflowY: 'auto',
+                        bgcolor: navbarBg,
+                        border: `1px solid ${borderColor}`
+                    }}
+                >
+                    {artists.map((a) => (
+                        <MenuItem
+                            key={a.id}
+                            onClick={() => {
+                                const params = new URLSearchParams(location.search);
+                                params.set('cat', currentCategory);
+                                navigate(`/artist/${a.id}?${params.toString()}`);
+                            }}
+                            sx={{color: textColor, '&:hover': {bgcolor: 'rgba(255,255,255,0.1)'}}}
+                        >
+                            {a.name}
+                        </MenuItem>
+                    ))}
+                </Paper>
+            </Popper>
         </>
     );
 }

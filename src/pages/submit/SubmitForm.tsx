@@ -18,25 +18,33 @@ interface Props {
 
 const isCyrillic = (text: string) => /[\u0400-\u04FF]/.test(text);
 
+const extractYoutubeId = (input: string) => {
+    const match = input.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : input;
+};
+
 export default function SubmitForm({ artists }: Props) {
     const [artistMode, setArtistMode] = useState<'existing' | 'new'>('existing');
     const [category, setCategory] = useState<'balkan' | 'foreign'>('balkan');
     const [lyrics, setLyrics] = useState('');
+    const [title, setTitle] = useState('');
+    const [previewArtist, setPreviewArtist] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
+
+    const previewLyrics = `{title: ${title}}\n{artist: ${previewArtist}}\n\n${lyrics}`;
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
         const data = new FormData(form);
 
-        const title = String(data.get('title'));
+        const titleValue = String(data.get('title'));
         const artistName = String(data.get('artistName') ?? '');
 
-        // Cyrillic validation for balkan songs
         if (category === 'balkan') {
-            if (!isCyrillic(title)) {
+            if (!isCyrillic(titleValue)) {
                 setError('Balkan songs must have a Cyrillic title.');
                 return;
             }
@@ -49,19 +57,23 @@ export default function SubmitForm({ artists }: Props) {
         setLoading(true);
         setError('');
 
+        const rawYoutubeId = String(data.get('youtubeId') ?? '').trim();
+
         try {
             await submitSong({
                 artistId: artistMode === 'existing' ? Number(data.get('artistId')) : undefined,
                 artistName: artistMode === 'new' ? artistName : undefined,
-                title,
+                title: titleValue,
                 lyricsWithChords: lyrics,
                 difficulty: String(data.get('difficulty')),
                 capoPosition: Number(data.get('capo')) || 0,
-                youtubeId: String(data.get('youtubeId')) || undefined,
+                youtubeId: rawYoutubeId ? extractYoutubeId(rawYoutubeId) : undefined,
             });
             setSuccess(true);
             form.reset();
             setLyrics('');
+            setTitle('');
+            setPreviewArtist('');
         } catch (err: any) {
             setError(err.message || 'Something went wrong.');
         } finally {
@@ -108,7 +120,16 @@ export default function SubmitForm({ artists }: Props) {
                     </ToggleButtonGroup>
 
                     {artistMode === 'existing' ? (
-                        <TextField select fullWidth label="Select artist" name="artistId">
+                        <TextField
+                            select
+                            fullWidth
+                            label="Select artist"
+                            name="artistId"
+                            onChange={(e) => {
+                                const found = filteredArtists.find(a => a.id === Number(e.target.value));
+                                setPreviewArtist(found?.name ?? '');
+                            }}
+                        >
                             {filteredArtists.map((a) => (
                                 <MenuItem key={a.id} value={a.id}>{a.name}</MenuItem>
                             ))}
@@ -118,6 +139,7 @@ export default function SubmitForm({ artists }: Props) {
                             fullWidth
                             label={category === 'balkan' ? 'Artist name (Cyrillic)' : 'Artist name'}
                             name="artistName"
+                            onChange={(e) => setPreviewArtist(e.target.value)}
                             helperText={category === 'balkan' ? 'Must be in Cyrillic e.g. Дино Мерлин' : ''}
                         />
                     )}
@@ -125,12 +147,13 @@ export default function SubmitForm({ artists }: Props) {
 
                 <Divider />
 
-                {/* Single title */}
+                {/* Title */}
                 <TextField
                     fullWidth
                     label={category === 'balkan' ? 'Title (Cyrillic)' : 'Title'}
                     name="title"
                     required
+                    onChange={(e) => setTitle(e.target.value)}
                     helperText={category === 'balkan' ? 'Must be in Cyrillic e.g. Љубав је' : ''}
                 />
 
@@ -151,10 +174,10 @@ export default function SubmitForm({ artists }: Props) {
 
                 <TextField
                     fullWidth
-                    label="YouTube ID (optional)"
+                    label="YouTube ID or URL (optional)"
                     name="youtubeId"
-                    placeholder="e.g. dQw4w9WgXcQ"
-                    helperText="Just the ID part, not the full URL"
+                    placeholder="e.g. dQw4w9WgXcQ or full YouTube URL"
+                    helperText="You can paste the full URL or just the video ID"
                 />
 
                 <TextField
@@ -165,7 +188,7 @@ export default function SubmitForm({ artists }: Props) {
                     name="lyrics"
                     value={lyrics}
                     onChange={(e) => setLyrics(e.target.value)}
-                    placeholder={`{title: Song Title}\n{artist: Artist Name}\n\n{start_of_verse}\nLet it [Am]be, let it [C]be\n{end_of_verse}`}
+                    placeholder={`{start_of_verse}\nLet it [Am]be, let it [C]be\n{end_of_verse}`}
                 />
 
                 {success && <Alert severity="success">Song submitted! It will be reviewed shortly.</Alert>}
@@ -182,13 +205,13 @@ export default function SubmitForm({ artists }: Props) {
                 </Button>
             </Box>
 
-            {/* RIGHT — Live Preview */}
+            {/* Right — Live Preview */}
             <Paper variant="outlined" sx={{ p: 3, position: 'sticky', top: 80, alignSelf: 'start', minHeight: 400 }}>
                 <Typography variant="subtitle2" mb={2} color="text.secondary">
                     Live Preview
                 </Typography>
-                {lyrics
-                    ? <ChordProPreview chordPro={lyrics} />
+                {(lyrics || title || previewArtist)
+                    ? <ChordProPreview chordPro={previewLyrics} />
                     : <Typography color="text.disabled">Start typing lyrics to see the preview…</Typography>
                 }
             </Paper>

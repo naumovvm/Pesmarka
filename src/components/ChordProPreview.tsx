@@ -9,14 +9,13 @@ interface Props {
 }
 
 export default function ChordProPreview({ chordPro }: Props) {
-    const { html, title, artist } = useMemo(() => {
+    const { html, artist } = useMemo(() => {
         try {
             const parser = new ChordProParser();
             const song = parser.parse(chordPro);
             const formatter = new HtmlDivFormatter();
             return {
                 html: formatter.format(song),
-                title: song.title,
                 artist: song.artist,
             };
         } catch {
@@ -26,8 +25,8 @@ export default function ChordProPreview({ chordPro }: Props) {
 
     return (
         <Box>
-            {title && <Typography variant="h6" fontWeight="bold">{title}</Typography>}
-            {artist && <Typography variant="subtitle2" color="text.secondary" mb={2}>{artist}</Typography>}
+            {/*{title && <Typography variant="h6" fontWeight="bold">{title}</Typography>}*/}
+            {artist && <Typography variant="subtitle2" color="text.secondary">{artist}</Typography>}
             <Box
                 dangerouslySetInnerHTML={{ __html: html }}
                 sx={{
