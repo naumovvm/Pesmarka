@@ -129,32 +129,34 @@ export default function AlphabetNav({
                             <IconButton onClick={onThemeToggle} sx={{color: textColor}}>
                                 {isDark ? <Brightness7Icon/> : <Brightness4Icon/>}
                             </IconButton>
-
                             {auth.user ? (
                                 <>
                                     <Typography
-                                        sx={{
-                                            color: textColor,
-                                            cursor: 'pointer',
-                                            '&:hover': {textDecoration: 'underline'}
-                                        }}
+                                        sx={{ color: textColor, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                                         onClick={() => navigate(auth.user?.isAdmin ? '/admin' : '/dashboard')}
                                     >
                                         {auth.user?.username}
                                     </Typography>
-                                    <Button variant="outlined" sx={{color: textColor, borderColor}}
-                                            onClick={auth.logout}>
+                                    <Button variant="outlined" sx={{ color: textColor, borderColor }} onClick={auth.logout}>
                                         Logout
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        sx={{ color: textColor, borderColor: borderColor }}
+                                        onClick={() => {
+                                            const params = new URLSearchParams(location.search);
+                                            window.location.href = `/submit?${params.toString()}`;
+                                        }}
+                                    >
+                                        Submit Song
                                     </Button>
                                 </>
                             ) : (
                                 <>
-                                    <Button variant="outlined" sx={{color: textColor, borderColor}}
-                                            onClick={onLoginClick}>
+                                    <Button variant="outlined" sx={{ color: textColor, borderColor }} onClick={onLoginClick}>
                                         Login
                                     </Button>
-                                    <Button variant="contained" sx={{bgcolor: buttonGray, color: '#fff'}}
-                                            onClick={onRegisterClick}>
+                                    <Button variant="contained" sx={{ bgcolor: buttonGray, color: '#fff' }} onClick={onRegisterClick}>
                                         Register
                                     </Button>
                                 </>

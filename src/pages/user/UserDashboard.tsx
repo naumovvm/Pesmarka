@@ -7,33 +7,56 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useTheme } from '@mui/material/styles';
 import { useAuth } from '../../context/AuthContext';
 import { getUserDashboard } from '../../api/user.telefunc';
+import { getFavorites } from '../../api/songs.telefunc';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const formatDate = (date: Date | string | null) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('sr-Latn', {
+    return new Date(date).toLocaleDateString('de-DE', {
         day: '2-digit', month: '2-digit', year: 'numeric'
     });
+};
+
+type Favorite = {
+    id: number;
+    title: string;
+    artistName: string;
+    createdAt: string | null;
 };
 
 export default function UserDashboard() {
     const auth = useAuth();
     const theme = useTheme();
     const { navbarBg, textColor } = theme.custom;
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const [data, setData] = useState<Awaited<ReturnType<typeof getUserDashboard>>>(null);
+    const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const payload = JSON.parse(atob(auth.user!.token.split('.')[1]));
 
-        getUserDashboard(payload.id).then(result => {
-            setData(result);
+        Promise.all([
+            getUserDashboard(payload.id),
+            getFavorites(),
+        ]).then(([dashData, favData]) => {
+            setData(dashData);
+            setFavorites(favData as Favorite[]);
             setLoading(false);
         });
     }, []);
+
+    const handleSongClick = (songId: number) => {
+        const params = new URLSearchParams(location.search);
+        const query = params.toString();
+        navigate(query ? `/song/${songId}?${query}` : `/song/${songId}`);
+    };
 
     if (loading) return (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
@@ -50,6 +73,7 @@ export default function UserDashboard() {
     return (
         <Box sx={{ maxWidth: '900px', mx: 'auto', mt: 4, mb: 6, px: 2 }}>
 
+            {/* Profile card */}
             <Paper elevation={3} sx={{ p: 3, mb: 3, display: 'flex', alignItems: 'center', gap: 4, borderRadius: 3 }}>
                 <Avatar sx={{ width: 100, height: 100, bgcolor: '#666' }}>
                     <AccountCircleIcon sx={{ fontSize: 80 }} />
@@ -84,11 +108,21 @@ export default function UserDashboard() {
                                 <Typography variant="body2">{data.submissions.length}</Typography>
                             </Box>
                         </Box>
+
+                        {/* ✅ Favorites count in profile */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <FavoriteIcon fontSize="small" sx={{ color: 'error.main' }} />
+                            <Box>
+                                <Typography variant="caption" color="text.secondary">Favorites</Typography>
+                                <Typography variant="body2">{favorites.length}</Typography>
+                            </Box>
+                        </Box>
                     </Box>
                 </Box>
             </Paper>
 
-            <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+            {/* Submissions section */}
+            <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden', mb: 3 }}>
                 <Box sx={{ bgcolor: navbarBg, px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <MusicNoteIcon sx={{ color: textColor }} />
                     <Typography variant="h6" sx={{ color: textColor, fontWeight: 'bold' }}>
@@ -132,11 +166,11 @@ export default function UserDashboard() {
                                     />
                                 </Box>
 
-                                {song.adminComment && (
-                                    <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
-                                        Admin note: {song.adminComment}
-                                    </Typography>
-                                )}
+                                {/*{song.adminComment && (*/}
+                                {/*    <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>*/}
+                                {/*        Admin note:2 {song.adminComment}*/}
+                                {/*    </Typography>*/}
+                                {/*)}*/}
 
                                 <Divider sx={{ my: 1 }} />
                                 <Button size="small" variant="outlined" startIcon="👁">
@@ -147,6 +181,44 @@ export default function UserDashboard() {
                     )}
                 </Box>
             </Paper>
+
+            {/* ✅ Favorites section */}
+            <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+                <Box sx={{ bgcolor: navbarBg, px: 3, py: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FavoriteIcon sx={{ color: 'error.main' }} />
+                    <Typography variant="h6" sx={{ color: textColor, fontWeight: 'bold' }}>
+                        Favorite Songs
+                    </Typography>
+                </Box>
+
+                <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {favorites.length === 0 ? (
+                        <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                            No favorites yet. Heart a song to save it here!
+                        </Typography>
+                    ) : (
+                        favorites.map((fav) => (
+                            <Paper
+                                key={fav.id}
+                                variant="outlined"
+                                sx={{ p: 2, borderRadius: 2, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+                                onClick={() => handleSongClick(fav.id)}
+                            >
+                                <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                                    {fav.title}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {fav.artistName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    ❤️ Saved on {formatDate(fav.createdAt)}
+                                </Typography>
+                            </Paper>
+                        ))
+                    )}
+                </Box>
+            </Paper>
+
         </Box>
     );
 }

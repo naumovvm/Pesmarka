@@ -2,10 +2,11 @@ import {
     Box, Button, TextField, Typography, Container,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { getLatestSongs } from './../api/songs.telefunc';
+import {useTheme} from '@mui/material/styles';
+import {useEffect, useState} from 'react';
+import {useNavigate, useLocation} from 'react-router-dom';
+import {getLatestSongs} from './../api/songs.telefunc';
+import { useAuth } from '../context/AuthContext';
 
 type HomeSong = {
     id: number;
@@ -14,12 +15,13 @@ type HomeSong = {
     createdAt: string | null;
 };
 
-export default function HomePage({ category }: { category: 'balkan' | 'foreign' }) {
+export default function HomePage({category}: { category: 'balkan' | 'foreign' }) {
     const [songs, setSongs] = useState<HomeSong[]>([]);
     const theme = useTheme();
-    const { navbarBg, textColor, buttonHoverBg } = theme.custom;
+    const {navbarBg, textColor, buttonHoverBg} = theme.custom;
     const navigate = useNavigate();
     const location = useLocation();
+    const auth = useAuth();
 
     useEffect(() => {
         getLatestSongs(category).then((rows) => {
@@ -43,15 +45,15 @@ export default function HomePage({ category }: { category: 'balkan' | 'foreign' 
     return (
         <Container
             maxWidth="xl"
-            sx={{ mt: 3, mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            sx={{mt: 3, mb: 5, display: 'flex', flexDirection: 'column', alignItems: 'center'}}
         >
             <TextField
                 placeholder="SEARCH BOX"
                 variant="outlined"
-                sx={{ width: '100%', maxWidth: '600px', mb: 4, bgcolor: 'background.paper' }}
+                sx={{width: '100%', maxWidth: '600px', mb: 4, bgcolor: 'background.paper'}}
             />
 
-            <Box sx={{ display: 'flex', gap: 3, mb: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Box sx={{display: 'flex', gap: 3, mb: 5, flexWrap: 'wrap', justifyContent: 'center'}}>
                 <Button
                     variant="contained"
                     size="large"
@@ -59,7 +61,7 @@ export default function HomePage({ category }: { category: 'balkan' | 'foreign' 
                         bgcolor: navbarBg,
                         color: textColor,
                         width: '200px',
-                        '&:hover': { bgcolor: buttonHoverBg },
+                        '&:hover': {bgcolor: buttonHoverBg},
                     }}
                 >
                     CHORD DIAGRAM
@@ -67,28 +69,30 @@ export default function HomePage({ category }: { category: 'balkan' | 'foreign' 
                 <Button
                     variant="contained"
                     size="large"
+                    disabled={!auth.user}
                     sx={{
                         bgcolor: navbarBg,
                         color: textColor,
                         width: '200px',
                         '&:hover': { bgcolor: buttonHoverBg },
                     }}
+                    onClick={() => navigate('/dashboard')}
                 >
                     FAVORITES
                 </Button>
             </Box>
 
-            <Box sx={{ width: '100%', maxWidth: '900px' }}>
-                <Typography variant="h6" align="center" sx={{ mb: 2, fontWeight: 'bold' }}>
+            <Box sx={{width: '100%', maxWidth: '900px'}}>
+                <Typography variant="h6" align="center" sx={{mb: 2, fontWeight: 'bold'}}>
                     Newest {category} songs:
                 </Typography>
                 <TableContainer component={Paper} elevation={3}>
                     <Table>
-                        <TableHead sx={{ bgcolor: navbarBg }}>
+                        <TableHead sx={{bgcolor: navbarBg}}>
                             <TableRow>
-                                <TableCell sx={{ color: textColor }}><strong>Song Title</strong></TableCell>
-                                <TableCell sx={{ color: textColor }}><strong>Artist</strong></TableCell>
-                                <TableCell sx={{ color: textColor }}><strong>Date Uploaded</strong></TableCell>
+                                <TableCell sx={{color: textColor}}><strong>Song Title</strong></TableCell>
+                                <TableCell sx={{color: textColor}}><strong>Artist</strong></TableCell>
+                                <TableCell sx={{color: textColor}}><strong>Date Uploaded</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -96,16 +100,21 @@ export default function HomePage({ category }: { category: 'balkan' | 'foreign' 
                                 <TableRow
                                     key={song.id}
                                     hover
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={{cursor: 'pointer'}}
                                     onClick={() => handleRowClick(song.id)}
                                 >
                                     <TableCell>{song.title}</TableCell>
                                     <TableCell>{song.artistName}</TableCell>
                                     <TableCell>
                                         {song.createdAt
-                                            ? new Date(song.createdAt).toLocaleDateString()
+                                            ? new Date(song.createdAt).toLocaleDateString('de-DE', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                            })
                                             : '-'}
                                     </TableCell>
+
                                 </TableRow>
                             ))}
 

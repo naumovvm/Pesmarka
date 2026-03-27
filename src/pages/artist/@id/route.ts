@@ -1,0 +1,1 @@
+export default '/artist/@id';

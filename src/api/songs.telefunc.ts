@@ -2,6 +2,7 @@ import { db } from "../db/db";
 import { artist, song, user as userTable, songSubmission } from "../db/schema";
 import {and, eq, desc} from "drizzle-orm";
 import { getContext } from 'telefunc';
+import { favorite } from '../db/schema';
 
 export async function submitSong(data: {
     artistId?: number;
@@ -173,3 +174,94 @@ export async function getLatestSongs(category: 'balkan' | 'foreign') {
     .orderBy(desc(song.createdAt))
     .limit(10);
 }
+
+export async function toggleFavorite(songId: number) {
+    const { user } = getContext() as { user: { id: number } | null };
+    if (!user) throw new Error('Must be logged in.');
+
+    const existing = await db
+        .select()
+        .from(favorite)
+        .where(and(eq(favorite.userId, user.id), eq(favorite.songId, songId)))
+        .limit(1);
+
+    if (existing.length > 0) {
+        await db.delete(favorite)
+            .where(and(eq(favorite.userId, user.id), eq(favorite.songId, songId)));
+        return { favorited: false };
+    } else {
+        await db.insert(favorite).values({ userId: user.id, songId });
+        return { favorited: true };
+    }
+}
+
+export async function isFavorited(songId: number) {
+    const { user } = getContext() as { user: { id: number } | null };
+    if (!user) return false;
+
+    const existing = await db
+        .select()
+        .from(favorite)
+        .where(and(eq(favorite.userId, user.id), eq(favorite.songId, songId)))
+        .limit(1);
+
+    return existing.length > 0;
+}
+
+export async function getFavorites() {
+    const { user } = getContext() as { user: { id: number } | null };
+    if (!user) throw new Error('Must be logged in.');
+
+    return db
+        .select({
+            id: song.id,
+            title: song.title,
+            artistName: artist.name,
+            createdAt: favorite.createdAt,
+        })
+        .from(favorite)
+        .innerJoin(song, eq(favorite.songId, song.id))
+        .innerJoin(artist, eq(song.artistId, artist.id))
+        .where(eq(favorite.userId, user.id))
+        .orderBy(desc(favorite.createdAt));
+}
+
+export async function fetchApprovedSongs() {
+    const { user } = getContext() as { user: { id: number; isAdmin: boolean } | null };
+    if (!user?.isAdmin) throw new Error('Not allowed.');
+
+    return db
+        .select({
+            id: song.id,
+            title: song.title,
+            difficulty: song.difficulty,
+            capoPosition: song.capoPosition,
+            originalKey: song.originalKey,
+            youtubeId: song.youtubeId,
+            lyricsWithChords: song.lyricsWithChords,
+            artistId: song.artistId,
+            artistName: artist.name,
+        })
+        .from(song)
+        .innerJoin(artist, eq(song.artistId, artist.id))
+        .orderBy(song.title);
+}
+
+export async function updateSong(id: number, data: {
+    title: string;
+    lyricsWithChords: string;
+    difficulty: string;
+    capoPosition: number;
+    originalKey: string | null;
+    youtubeId: string | null;
+}) {
+    const { user } = getContext() as { user: { id: number; isAdmin: boolean } | null };
+    if (!user?.isAdmin) throw new Error('Not allowed.');
+
+    await db.update(song)
+        .set(data)
+        .where(eq(song.id, id));
+
+    return { success: true };
+}
+

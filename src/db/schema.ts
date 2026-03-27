@@ -52,5 +52,9 @@ export const songSubmission = pgTable('song_submission', {
     capoPosition: integer('capo_position').default(0),
 });
 
-// to do: remove both title types and maybe stick to just one title? no clue why I needed both in the first place
-// consult with claude
+export const favorite = pgTable('favorite', {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').notNull().references(() => user.id),
+    songId: integer('song_id').notNull().references(() => song.id),
+    createdAt: timestamp('created_at').defaultNow(),
+});

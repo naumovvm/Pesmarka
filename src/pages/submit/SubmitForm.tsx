@@ -16,7 +16,7 @@ interface Props {
     artists: Artist[];
 }
 
-const isCyrillic = (text: string) => /[\u0400-\u04FF]/.test(text);
+// const isCyrillic = (text: string) => /[\u0400-\u04FF]/.test(text);
 
 const extractYoutubeId = (input: string) => {
     const match = input.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -42,17 +42,6 @@ export default function SubmitForm({ artists }: Props) {
 
         const titleValue = String(data.get('title'));
         const artistName = String(data.get('artistName') ?? '');
-
-        if (category === 'balkan') {
-            if (!isCyrillic(titleValue)) {
-                setError('Balkan songs must have a Cyrillic title.');
-                return;
-            }
-            if (artistMode === 'new' && !isCyrillic(artistName)) {
-                setError('Balkan artist names must be in Cyrillic.');
-                return;
-            }
-        }
 
         setLoading(true);
         setError('');

@@ -12,8 +12,10 @@ import {
     rejectSubmission,
     addArtist,
     getAllArtists,
+    fetchApprovedSongs,
 } from './../../api/songs.telefunc';
 import ChordProPreview from './../../components/ChordProPreview';
+import EditSongModal from './../../components/EditSongModal';
 
 type Submission = {
     id: number;
@@ -24,6 +26,7 @@ type Submission = {
     capoPosition: number | null;
     lyricsWithChords: string;
     youtubeId: string | null;
+    originalKey: string | null;
     createdAt: Date | null;
     submittedBy: string | null;
 };
@@ -34,10 +37,23 @@ type Artist = {
     category: string;
 };
 
+type Song = {
+    id: number;
+    title: string;
+    artistId: number;
+    difficulty: string;
+    capoPosition: number | null;
+    lyricsWithChords: string;
+    youtubeId: string | null;
+    originalKey: string | null;
+    artistName?: string | null;
+};
+
 export default function AdminDashboard() {
     const [tab, setTab] = useState(0);
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [artists, setArtists] = useState<Artist[]>([]);
+    const [approvedSongs, setApprovedSongs] = useState<Song[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -49,14 +65,19 @@ export default function AdminDashboard() {
     const [artistForm, setArtistForm] = useState({ name: '', letter: '', category: 'balkan', bio: '' });
     const [artistSuccess, setArtistSuccess] = useState(false);
 
+    const [editingSong, setEditingSong] = useState<Song | null>(null);
+
     const fetchData = async () => {
+        setLoading(true);
         try {
-            const [subs, arts] = await Promise.all([
+            const [subs, arts, songs] = await Promise.all([
                 getPendingSubmissions(),
                 getAllArtists(),
+                fetchApprovedSongs(),
             ]);
             setSubmissions(subs);
             setArtists(arts);
+            setApprovedSongs(songs);
         } catch (e: any) {
             setError(e.message);
         } finally {
@@ -94,7 +115,6 @@ export default function AdminDashboard() {
             await addArtist(artistForm);
             setArtistSuccess(true);
             setArtistForm({ name: '', letter: '', category: 'balkan', bio: '' });
-            // Refresh artists list so the new one appears in dropdowns immediately
             const updated = await getAllArtists();
             setArtists(updated);
         } catch (e: any) {
@@ -109,11 +129,12 @@ export default function AdminDashboard() {
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
             <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-                <Tab label={`Pending Submissions (${submissions.length})`} />
+                <Tab label={`Pending (${submissions.length})`} />
                 <Tab label="Add Artist" />
+                <Tab label="Manage Songs" />
             </Tabs>
 
-            {/* TAB 1 — Pending Submissions */}
+            {/* TAB 0 — Pending Submissions */}
             {tab === 0 && (
                 <Box>
                     {loading && <CircularProgress />}
@@ -180,7 +201,7 @@ export default function AdminDashboard() {
                 </Box>
             )}
 
-            {/* TAB 2 — Add Artist */}
+            {/* TAB 1 — Add Artist */}
             {tab === 1 && (
                 <Box sx={{ maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {artistSuccess && <Alert severity="success">Artist added! You can now assign them to pending submissions.</Alert>}
@@ -208,13 +229,43 @@ export default function AdminDashboard() {
                     <TextField
                         label="Bio (optional)"
                         multiline
-                        rows={3}
+                        rows={10}
                         value={artistForm.bio}
                         onChange={(e) => setArtistForm(p => ({ ...p, bio: e.target.value }))}
                     />
                     <Button variant="contained" onClick={handleAddArtist}>
                         Add Artist
                     </Button>
+                </Box>
+            )}
+
+            {/* TAB 2 — Manage Songs */}
+            {tab === 2 && (
+                <Box>
+                    {loading && <CircularProgress />}
+                    {!loading && approvedSongs.length === 0 && (
+                        <Typography color="text.secondary">No approved songs yet.</Typography>
+                    )}
+                    {approvedSongs.map((s) => (
+                        <Card key={s.id} variant="outlined" sx={{ mb: 2 }}>
+                            <CardContent>
+                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                    <Typography variant="h6">{s.title}</Typography>
+                                    <Chip label={s.difficulty} size="small" />
+                                    {s.capoPosition ? <Chip label={`Capo ${s.capoPosition}`} size="small" /> : null}
+                                </Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    Artist ID: {s.artistId}
+                                    {s.originalKey ? ` · Key: ${s.originalKey}` : ''}
+                                </Typography>
+                            </CardContent>
+                            <CardActions>
+                                <Button variant="outlined" onClick={() => setEditingSong(s)}>
+                                    Edit
+                                </Button>
+                            </CardActions>
+                        </Card>
+                    ))}
                 </Box>
             )}
 
@@ -237,6 +288,16 @@ export default function AdminDashboard() {
                     <Button color="error" variant="contained" onClick={handleReject}>Reject</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Edit Song Modal */}
+            {editingSong && (
+                <EditSongModal
+                    song={editingSong}
+                    open={!!editingSong}
+                    onClose={() => setEditingSong(null)}
+                    onSaved={fetchData}
+                />
+            )}
         </Box>
     );
 }
