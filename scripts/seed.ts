@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
-import {db} from '../src/db/db.ts';
-import {user} from '../src/db/schema.ts';
+import {db} from '../src/db/db'
+import {user} from '../src/db/schema';
 
 const ADMIN_USERNAME = 'admin';
 const ADMIN_EMAIL = 'admin@pesmarka.com';
